@@ -18,24 +18,49 @@ export default function UploadPage() {
     const [uploadStatus, setUploadStatus] = useState<null | "success" | "error">(null)
     const [processingStatus, setProcessingStatus] = useState<null | "processing" | "complete">(null)
 
-    const handleUpload = (e: React.FormEvent) => {
+    const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsUploading(true)
         setUploadStatus(null)
         setProcessingStatus(null)
-
-        // Simulate upload process
-        setTimeout(() => {
-            setIsUploading(false)
+      
+        const formData = new FormData()
+        if (activeTab === "file") {
+          const input = document.getElementById("file") as HTMLInputElement
+          if (input?.files?.[0]) {
+            formData.append("file", input.files[0])
+          }
+        } else if (activeTab === "text") {
+          const textInput = document.getElementById("text") as HTMLTextAreaElement
+          formData.append("text", textInput.value)
+        } else if (activeTab === "url") {
+          const urlInput = document.getElementById("url") as HTMLInputElement
+          formData.append("url", urlInput.value)
+        }
+      
+        try {
+          const res = await fetch("/api/process", {
+            method: "POST",
+            body: formData,
+          })
+      
+          if (!res.ok) throw new Error("Failed")
+      
+            const data = await res.json()
             setUploadStatus("success")
-
-            // Simulate AI processing
-            setProcessingStatus("processing")
-            setTimeout(() => {
-                setProcessingStatus("complete")
-            }, 3000)
-        }, 2000)
-    }
+            setProcessingStatus("complete")
+            console.log("Summary:", data.summary)
+            console.log("Quiz:", data.quiz)
+            // You can store these in state or navigate to a results page
+          // You could now navigate to /results and pass data.result or display it here
+        } catch (error) {
+          console.error(error)
+          setUploadStatus("error")
+        } finally {
+          setIsUploading(false)
+        }
+      }
+      
 
     return (
         <div className="max-w-3xl mx-auto">
