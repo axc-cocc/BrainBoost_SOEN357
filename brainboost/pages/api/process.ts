@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { IncomingForm } from "formidable"
 import OpenAI from "openai"
+import pdfParse from "pdf-parse"
 import fs from "fs/promises"
 
 const openai = new OpenAI({
@@ -40,7 +41,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         content = await response.text()
       } else if (files.file) {
         const file = files.file[0]
-        content = await fs.readFile(file.filepath, "utf-8")
+        const buffer = await fs.readFile(file.filepath)
+      
+        if (file.originalFilename?.endsWith(".pdf")) {
+          const pdfData = await pdfParse(buffer)
+          content = pdfData.text
+        } else {
+          content = buffer.toString("utf-8")
+        }
       }
 
       if (!content) return res.status(400).json({ error: "No content found" })
