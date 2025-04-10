@@ -16,10 +16,9 @@ import {
     SidebarInset,
 } from "@/components/ui/sidebar"
 import { MobileNav } from "@/components/layout/mobile-nav"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { LayoutDashboard, Upload, FileText, BookOpen, Calendar, Settings, LogOut } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import { supabase } from "@/lib/supabaseClient"
 
 const navigation = [
@@ -121,7 +120,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                                 <Avatar className="h-6 w-6 mr-2">
                                                     <AvatarFallback>SI</AvatarFallback>
                                                 </Avatar>
-                                                <span>Sign In</span>
+                                                <span>Sign In or Sign Up</span>
                                             </div>
                                         </Link>
                                     </SidebarMenuButton>

@@ -23,43 +23,59 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Moon, Sun, Trash2, User, Bell, Shield, Download, BookOpen } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 
 export default function SettingsPage() {
     const [theme, setTheme] = useState("system")
     const [quizFormat, setQuizFormat] = useState("mcq")
-
     const [user, setUser] = useState<any>(null)
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [isSignUp, setIsSignUp] = useState(false)
+    const searchParams = useSearchParams()
+    const initialTab = searchParams.get("tab") || "appearance"
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const {
-                data: { user },
-            } = await supabase.auth.getUser()
-            setUser(user)
+        const getUser = async () => {
+          const { data: { user } } = await supabase.auth.getUser()
+          setUser(user)
         }
-
-        fetchUser()
-
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null)
+        getUser()
+    
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+          setUser(session?.user ?? null)
         })
-
+    
         return () => {
-            authListener.subscription.unsubscribe()
+          listener.subscription.unsubscribe()
         }
-    }, [])
-
-    const handleLogin = async () => {
+      }, [])
+    
+      const handleLogin = async () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) alert("Login failed: " + error.message)
-    }
-
-    const handleLogout = async () => {
+      }
+    
+      const handleSignUp = async () => {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        })
+        if (error) {
+          alert("Signup failed: " + error.message)
+        } else {
+          alert("Check your email to confirm your account.")
+        }
+      }
+    
+      const handleLogout = async () => {
         const { error } = await supabase.auth.signOut()
         if (error) alert("Logout failed: " + error.message)
-    }
+        setUser(null)
+      }
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -68,7 +84,7 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Manage your account settings and preferences</p>
             </div>
 
-            <Tabs defaultValue="appearance">
+            <Tabs defaultValue={initialTab}>
                 <div className="flex overflow-x-auto pb-2">
                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                         <TabsTrigger
@@ -337,6 +353,18 @@ export default function SettingsPage() {
                           <CardContent className="space-y-4">
                             {!user ? (
                               <>
+                                <div className="flex items-center justify-between">
+                                  <h2 className="text-lg font-medium">
+                                    {isSignUp ? "Create an account" : "Sign in to your account"}
+                                  </h2>
+                                  <Button
+                                    variant="link"
+                                    className="text-sm px-0"
+                                    onClick={() => setIsSignUp(!isSignUp)}
+                                  >
+                                    {isSignUp ? "Already have an account?" : "Create account"}
+                                  </Button>
+                                </div>
                                 <div className="space-y-2">
                                   <Label>Email</Label>
                                   <Input
@@ -353,7 +381,9 @@ export default function SettingsPage() {
                                     onChange={(e) => setPassword(e.target.value)}
                                   />
                                 </div>
-                                <Button onClick={handleLogin}>Sign In</Button>
+                                <Button onClick={isSignUp ? handleSignUp : handleLogin}>
+                                  {isSignUp ? "Sign Up" : "Sign In"}
+                                </Button>
                               </>
                             ) : (
                               <>
@@ -389,8 +419,7 @@ export default function SettingsPage() {
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="destructive" className="w-full">
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete Account
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete Account
                                     </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
