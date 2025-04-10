@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabaseClient"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -26,6 +27,39 @@ import { Moon, Sun, Trash2, User, Bell, Shield, Download, BookOpen } from "lucid
 export default function SettingsPage() {
     const [theme, setTheme] = useState("system")
     const [quizFormat, setQuizFormat] = useState("mcq")
+
+    const [user, setUser] = useState<any>(null)
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser()
+            setUser(user)
+        }
+
+        fetchUser()
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null)
+        })
+
+        return () => {
+            authListener.subscription.unsubscribe()
+        }
+    }, [])
+
+    const handleLogin = async () => {
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) alert("Login failed: " + error.message)
+    }
+
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut()
+        if (error) alert("Logout failed: " + error.message)
+    }
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -294,76 +328,89 @@ export default function SettingsPage() {
 
                     <TabsContent value="account" className="space-y-4">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Account Information</CardTitle>
-                                <CardDescription>Update your account details</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="first-name">First Name</Label>
-                                        <Input id="first-name" defaultValue="John" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="last-name">Last Name</Label>
-                                        <Input id="last-name" defaultValue="Doe" />
-                                    </div>
-                                </div>
-
+                          <CardHeader>
+                            <CardTitle>Account</CardTitle>
+                            <CardDescription>
+                              {user ? "Update your profile or manage your account" : "Sign in to manage your account"}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {!user ? (
+                              <>
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input id="email" type="email" defaultValue="john.doe@example.com" />
+                                  <Label>Email</Label>
+                                  <Input
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                  />
                                 </div>
-
-                                <Separator />
-
                                 <div className="space-y-2">
-                                    <Label htmlFor="current-password">Current Password</Label>
-                                    <Input id="current-password" type="password" />
+                                  <Label>Password</Label>
+                                  <Input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    onChange={(e) => setPassword(e.target.value)}
+                                  />
                                 </div>
-
+                                <Button onClick={handleLogin}>Sign In</Button>
+                              </>
+                            ) : (
+                              <>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="new-password">New Password</Label>
-                                        <Input id="new-password" type="password" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="confirm-password">Confirm Password</Label>
-                                        <Input id="confirm-password" type="password" />
-                                    </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="first-name">First Name</Label>
+                                    <Input id="first-name" placeholder="First name" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="last-name">Last Name</Label>
+                                    <Input id="last-name" placeholder="Last name" />
+                                  </div>
                                 </div>
-
-                                <Button className="mt-2">Save Changes</Button>
-                            </CardContent>
+                            
+                                <div className="space-y-2">
+                                  <Label>Email</Label>
+                                  <Input value={user.email} readOnly disabled />
+                                </div>
+                              </>
+                            )}
+                          </CardContent>
+                        
+                          {user && (
                             <CardFooter className="flex flex-col items-start border-t px-6 py-4">
-                                <h3 className="text-lg font-medium">Danger Zone</h3>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Permanently delete your account and all of your data
-                                </p>
+                              <h3 className="text-lg font-medium">Danger Zone</h3>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                Sign out of your account or permanently delete all of your data.
+                              </p>
+                              <div className="flex flex-col gap-3 w-full">
+                                <Button onClick={handleLogout} variant="secondary" className="w-full">
+                                  Sign Out
+                                </Button>
                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete Account
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action cannot be undone. This will permanently delete your account and remove all of your
-                                                data from our servers.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction className="bg-destructive text-destructive-foreground">
-                                                Delete Account
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" className="w-full">
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete Account
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. It will delete your account and all your data.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction className="bg-destructive text-destructive-foreground">
+                                        Delete Account
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
                                 </AlertDialog>
+                              </div>
                             </CardFooter>
+                          )}
                         </Card>
                     </TabsContent>
 

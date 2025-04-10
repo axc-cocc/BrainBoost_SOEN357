@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { LayoutDashboard, Upload, FileText, BookOpen, Calendar, Settings, LogOut } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { supabase } from "@/lib/supabaseClient"
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -33,10 +34,31 @@ const navigation = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const [isMounted, setIsMounted] = useState(false)
+    const [user, setUser] = useState<any>(null)
 
     useEffect(() => {
         setIsMounted(true)
+
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            setUser(user)
+        }
+
+        fetchUser()
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null)
+        })
+
+        return () => {
+            authListener.subscription.unsubscribe()
+        }
     }, [])
+
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut()
+        if (error) console.error("Logout error:", error)
+    }
 
     if (!isMounted) {
         return null
@@ -70,29 +92,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarContent>
                     <SidebarFooter>
                         <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton>
-                                    <div className="flex items-center">
-                                        <Avatar className="h-6 w-6 mr-2">
-                                            <Image
-                                                src="/placeholder.svg"
-                                                alt="User"
-                                                height={32}
-                                                width={32}
-                                                unoptimized
-                                            />
-                                            <AvatarFallback>JD</AvatarFallback>
-                                        </Avatar>
-                                        <span>John Doe</span>
-                                    </div>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton>
-                                    <LogOut className="h-5 w-5" />
-                                    <span>Logout</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
+                            {user ? (
+                                <>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton>
+                                            <div className="flex items-center">
+                                                <Avatar className="h-6 w-6 mr-2">
+                                                    <AvatarFallback>
+                                                        {user.email?.charAt(0).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="truncate">{user.email}</span>
+                                            </div>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={handleLogout}>
+                                            <LogOut className="h-5 w-5" />
+                                            <span>Logout</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </>
+                            ) : (
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild>
+                                        <Link href="/settings?tab=account">
+                                            <div className="flex items-center">
+                                                <Avatar className="h-6 w-6 mr-2">
+                                                    <AvatarFallback>SI</AvatarFallback>
+                                                </Avatar>
+                                                <span>Sign In</span>
+                                            </div>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            )}
                         </SidebarMenu>
                     </SidebarFooter>
                 </Sidebar>
