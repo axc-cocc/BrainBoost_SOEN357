@@ -1,7 +1,10 @@
-import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
+/** @type {import('next').NextConfig} */
+// next.config.ts
+const nextConfig = {
+    webpack(config: any) {
+        return config;
+    },
 };
 
 export default nextConfig;
